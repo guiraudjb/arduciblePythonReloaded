@@ -13,6 +13,7 @@ game_timer = pygame.time.get_ticks()
 channel1 = pygame.mixer.Channel(0)
 channel2 = pygame.mixer.Channel(1)
 channel2.set_volume(0.1)
+channel3 = pygame.mixer.Channel(2)
 
 cibleencours = 2
 score = 0
@@ -44,6 +45,7 @@ if not os.path.exists("config.ini"):
     f.write("intro_length = 10\n")
     f.write("game_length = 60\n")
     f.write("ending_length = 10\n")
+    f.write("splash_length = 7\n")
     f.write("\n")
     f.write("[BonusTime]\n")
     f.write("time = 5\n")
@@ -77,27 +79,32 @@ if not os.path.exists("config.ini"):
 
 
 if os.path.exists("config.ini"):
-    with open("config.ini", "r") as f:
-        config = configparser.ConfigParser()
-        config.read_file(f)
-        intro_length = int(config["TimeSetting"]["intro_length"])
-        game_length = int(config["TimeSetting"]["game_length"])
-        ending_length = int(config["TimeSetting"]["ending_length"])
-        bonus_time = int(config["BonusTime"]["time"])
-        active_webcam_string = (config["CamActivation"]["Webcam"])
-        cam_fps = int(config["CamActivation"].get("CamFPS", "5"))
-        fullscreen_string = config["Screen"]["Fullscreen"]
-        background_music_string = config["Audio"]["Music"]
-        sound_effects_string = config["Audio"]["Effects"]
-        FadeoutTime = int(config["Audio"]["FadeoutTime"])
-        debug_line_string = (config["Debug"]["DebugLine"])
-        resolution = int(config["Resolution"]["Resolution"])
-        FPS = int(config["Debug"]["FPS"])
-        ShowFps_string = config["Debug"]["ShowFps"]
-        DebugCam_string = config["Debug"]["DebugCam"]
-        credit_left = int(config["Debug"]["Credit"])
-        if "Score" in config and "high_score" in config["Score"]:
-            high_score = int(config["Score"]["high_score"])
+    try:
+        with open("config.ini", "r") as f:
+            config = configparser.ConfigParser()
+            config.read_file(f)
+            intro_length = int(config["TimeSetting"]["intro_length"])
+            game_length = int(config["TimeSetting"]["game_length"])
+            ending_length = int(config["TimeSetting"]["ending_length"])
+            splash_length = int(config["TimeSetting"].get("splash_length", "7"))
+            bonus_time = int(config["BonusTime"]["time"])
+            active_webcam = config.getboolean("CamActivation", "Webcam")
+            cam_fps = int(config["CamActivation"].get("CamFPS", "5"))
+            Fullscreen = config.getboolean("Screen", "Fullscreen")
+            background_music = config.getboolean("Audio", "Music")
+            sound_effects = config.getboolean("Audio", "Effects")
+            FadeoutTime = int(config["Audio"]["FadeoutTime"])
+            debug_line = config.getboolean("Debug", "DebugLine")
+            resolution = int(config["Resolution"]["Resolution"])
+            FPS = int(config["Debug"]["FPS"])
+            ShowFPS = config.getboolean("Debug", "ShowFps")
+            DebugCam = config.getboolean("Debug", "DebugCam")
+            credit_left = int(config["Debug"]["Credit"])
+            if "Score" in config and "high_score" in config["Score"]:
+                high_score = int(config["Score"]["high_score"])
+    except (KeyError, ValueError, configparser.Error) as e:
+        print(f"Erreur dans config.ini : {e}. Supprimez le fichier pour le régénérer.")
+        raise SystemExit(1)
 
 time_left = intro_length
 
@@ -117,8 +124,7 @@ else:
     LARGEUR_ECRAN = 1024
     HAUTEUR_ECRAN = 768
 
-STR="résolution " + str(LARGEUR_ECRAN) + " X " + str(HAUTEUR_ECRAN)
-print(STR)
+print("résolution " + str(LARGEUR_ECRAN) + " X " + str(HAUTEUR_ECRAN))
 
 Fontsize = round(HAUTEUR_ECRAN/10)
 Fontsize2 = round(HAUTEUR_ECRAN/20)
@@ -137,11 +143,3 @@ blue = (66, 0, 255)
 bluelight = (66, 236, 255)
 green = (0, 255, 0)
 greenlight = (0, 200, 0)
-
-active_webcam = active_webcam_string == 'True'
-Fullscreen = fullscreen_string == 'True'
-background_music = background_music_string == 'True'
-sound_effects = sound_effects_string == 'True'
-debug_line = debug_line_string == 'True'
-ShowFPS = ShowFps_string == 'True'
-DebugCam = DebugCam_string == 'True'

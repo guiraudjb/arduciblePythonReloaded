@@ -4,11 +4,13 @@ import numpy as np
 import pygame
 from Scripts.init import *
 
-POSE_CONNECTIONS = mp.tasks.vision.PoseLandmarksConnections.POSE_LANDMARKS
+_CAM_DISPLAY_W = 224  # largeur stickman à 1920x1080
+_CAM_DISPLAY_H = 383  # hauteur stickman à 1920x1080
 
 
 def draw_skeleton(image, landmarks, img_height, img_width):
-    for conn in POSE_CONNECTIONS:
+    pose_connections = mp.tasks.vision.PoseLandmarksConnections.POSE_LANDMARKS
+    for conn in pose_connections:
         start = landmarks[conn.start]
         end = landmarks[conn.end]
         cv2.line(image,
@@ -45,10 +47,6 @@ class Cam(pygame.sprite.Sprite):
         self.LimiteDroiteCamera = round(self.Largeur - (self.Largeur - self.LargeurChampCamera) / 2)
         self.LimiteBasseCamera = round((self.Hauteur - self.HauteurChampCamera) / 2)
         self.LimiteHauteCamera = round(self.Hauteur - (self.Hauteur - self.HauteurChampCamera) / 2)
-
-        # Stubs de compatibilité (plus utilisés mais référencés depuis main.py)
-        self.mp_drawing = None
-        self.mp_pose = None
 
         base_options = mp.tasks.BaseOptions(model_asset_path='assets/pose_landmarker_lite.task')
         options = mp.tasks.vision.PoseLandmarkerOptions(
@@ -103,9 +101,7 @@ class Cam(pygame.sprite.Sprite):
         rgb_frame = cv2.cvtColor(black_frame, cv2.COLOR_BGR2RGB)
         self.cam = pygame.surfarray.make_surface(rgb_frame)
         self.cam = pygame.transform.rotate(self.cam, -90)
-        self.cam = pygame.transform.scale(self.cam, (224, 383))
-        mycam_width, mycam_height = self.cam.get_rect().size
-        self.cam = pygame.transform.scale(self.cam, (mycam_width * LARGEUR_ECRAN / 1920, mycam_height * HAUTEUR_ECRAN / 1080))
-        self.images = self.cam
-        self.rect = self.images.get_rect()
-        self.width, self.height = self.images.get_rect().size
+        self.cam = pygame.transform.scale(self.cam, (_CAM_DISPLAY_W * LARGEUR_ECRAN // 1920, _CAM_DISPLAY_H * HAUTEUR_ECRAN // 1080))
+        self.image = self.cam
+        self.rect = self.image.get_rect()
+        self.width, self.height = self.image.get_rect().size
