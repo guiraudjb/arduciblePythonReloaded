@@ -14,6 +14,7 @@ channel1 = pygame.mixer.Channel(0)
 channel2 = pygame.mixer.Channel(1)
 channel2.set_volume(0.1)
 channel3 = pygame.mixer.Channel(2)
+channel4 = pygame.mixer.Channel(3)  # voix de Fanny (répliques)
 
 cibleencours = 2
 score = 0
@@ -56,6 +57,7 @@ if not os.path.exists("config.ini"):
     f.write("\n")
     f.write("[Screen]\n")
     f.write("Fullscreen = True\n")
+    f.write("CRT = False\n")
     f.write("\n")
     f.write("[Audio]\n")
     f.write("Music = True\n")
@@ -91,6 +93,7 @@ if os.path.exists("config.ini"):
             active_webcam = config.getboolean("CamActivation", "Webcam")
             cam_fps = int(config["CamActivation"].get("CamFPS", "5"))
             Fullscreen = config.getboolean("Screen", "Fullscreen")
+            crt = config.getboolean("Screen", "CRT", fallback=False)
             background_music = config.getboolean("Audio", "Music")
             sound_effects = config.getboolean("Audio", "Effects")
             FadeoutTime = int(config["Audio"]["FadeoutTime"])

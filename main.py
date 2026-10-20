@@ -37,15 +37,14 @@ def next_gamestate():
     global webcam_compatibility
     if gamestate == 0:
         gamestate = 1
-        if webcam_compatibility == True:
-            ingamebackground.image = ingamebackground.images[1]
-        else:
-            ingamebackground.image = ingamebackground.images[0]
+        ingamebackground.reset(webcam_compatibility)
         time_left = game_length
         score = 0
+        fanny_companion.reset()
+        fanny_special_zero.reset()
     elif gamestate == 1:
         gamestate = 2
-        ingamebackground.image = ingamebackground.images[2]
+        ingamebackground.freeze_for_ending()
         time_left = ending_length
     elif gamestate == 2:
         gamestate = 0
@@ -85,6 +84,7 @@ def update_score():
         channel2.play(sfx_hit)
     score = score + 1
     time_left = time_left + bonus_time
+    fanny_companion.on_score_update(score)
 
 def draw_camring():
     global ecran
@@ -236,11 +236,16 @@ def draw_fps():
         ecran.blit(FPS1, (0, 0))
         ecran.blit(FPS2, (0, 0))
 
+def draw_crt():
+    if crt_surface:
+        ecran.blit(crt_surface, (0, 0))
+
 def ingamedraw():
     draw_ingame_text()
     if debug_line == True:
         debug_lines()
     draw_fps()
+    draw_crt()
     pygame.display.flip()
 
 def handle_common_keys(event):
@@ -299,20 +304,18 @@ if active_webcam:
         else:
             webcam_compatibility = False
 
-        if webcam_compatibility == True:
-            ingamebackground.image = ingamebackground.images[1]
-        else:
+        if webcam_compatibility == False:
             webcam_zone_interdite = False
-            ingamebackground.image = ingamebackground.images[0]
+        ingamebackground.reset(webcam_compatibility)
     except Exception as e:
         print(f"Webcam/MediaPipe error: {e}")
         webcam_compatibility = False
         webcam_zone_interdite = False
-        ingamebackground.image = ingamebackground.images[0]
+        ingamebackground.reset(webcam_compatibility)
 else:
     webcam_compatibility = False
     webcam_zone_interdite = False
-    ingamebackground.image = ingamebackground.images[0]
+    ingamebackground.reset(webcam_compatibility)
 
 pygame.display.set_caption("Arducible PÉTANQUE GAME")
 icon = pygame.image.load("assets/icons/192x192.png")
@@ -322,6 +325,30 @@ if Fullscreen:
     ecran = pygame.display.set_mode((LARGEUR_ECRAN, HAUTEUR_ECRAN), pygame.SCALED | pygame.FULLSCREEN, vsync=1)
 else:
     ecran = pygame.display.set_mode((LARGEUR_ECRAN, HAUTEUR_ECRAN), pygame.SCALED)
+
+fanny = FannySpinner()
+fanny_companion = FannyCompanion()
+fanny_special_zero = FannySpecialZero()
+
+crt_surface = None
+if crt:
+    import numpy as np
+    crt_surface = pygame.Surface((LARGEUR_ECRAN, HAUTEUR_ECRAN), pygame.SRCALPHA)
+    if HAUTEUR_ECRAN >= 1080:
+        sl_step, sl_alpha = 6, 30
+    elif HAUTEUR_ECRAN >= 720:
+        sl_step, sl_alpha = 4, 25
+    else:
+        sl_step, sl_alpha = 3, 20
+    for _y in range(0, HAUTEUR_ECRAN, sl_step):
+        pygame.draw.line(crt_surface, (0, 0, 0, sl_alpha), (0, _y), (LARGEUR_ECRAN, _y))
+    _alpha = pygame.surfarray.pixels_alpha(crt_surface)
+    _cx, _cy = LARGEUR_ECRAN // 2, HAUTEUR_ECRAN // 2
+    _X, _Y = np.ogrid[:LARGEUR_ECRAN, :HAUTEUR_ECRAN]
+    _dist = np.sqrt(((_X - _cx) / _cx) ** 2 + ((_Y - _cy) / _cy) ** 2)
+    _vignette = np.clip(_dist ** 2 * 180, 0, 160).astype(np.uint8)
+    _alpha[:] = np.maximum(_alpha, _vignette)
+    del _alpha
 
 white = [255, 255, 255]
 ecran.fill(white)
@@ -335,6 +362,9 @@ while time_left >= 0:
     ecran.fill(white)
     countdown()
     ecran.blit(logo.image, (LARGEUR_ECRAN/2 - logo_w/2, HAUTEUR_ECRAN/2 - logo_h/2))
+    fanny.update()
+    fanny.draw(ecran, LARGEUR_ECRAN - int(HAUTEUR_ECRAN * 0.12), int(HAUTEUR_ECRAN * 0.12))
+    draw_crt()
     pygame.display.flip()
     clock.tick(FPS)
 time_left = intro_length
@@ -381,6 +411,8 @@ while continuer:
         if credit_left < 1:
             draw_text("insert coin", LARGEUR_ECRAN/2, HAUTEUR_ECRAN*3/4, True, True, 1, 3)
             draw_intro_insertCoin()
+            fanny.update()
+            fanny.draw(ecran, LARGEUR_ECRAN - int(HAUTEUR_ECRAN * 0.12), int(HAUTEUR_ECRAN * 0.12))
             Animation1.update()
             ecran.blit(Animation1.image, (LARGEUR_ECRAN*4/20-Animation1.res_img_width/2, HAUTEUR_ECRAN*9/20-Animation1.res_img_height/2))
             Animation2.update()
@@ -403,11 +435,13 @@ while continuer:
                     channel1.play(music, loops=-1)
                 next_gamestate()
 
+        draw_crt()
         pygame.display.flip()
 
     #-----------------------Game scene----------------------------------
     if gamestate == 1:
         countdown()
+        ingamebackground.update_for_score(score, webcam_compatibility)
 
         if webcam_compatibility == True:
             mycam.update()
@@ -446,6 +480,7 @@ while continuer:
                             ciblealeatoire()
 
         draw_cibles()
+        fanny_companion.draw(ecran, LARGEUR_ECRAN - int(LARGEUR_ECRAN * 0.01), int(HAUTEUR_ECRAN * 0.02))
         ingamedraw()
 
         if time_left <= 0:
@@ -477,10 +512,16 @@ while continuer:
         ecran.blit(ingamebackground.image, ingamebackground.rect)
         draw_ending_text()
 
+        if score == 0:
+            fanny_special_zero.draw(ecran, int(LARGEUR_ECRAN * 0.16), int(HAUTEUR_ECRAN * 0.03))
+        else:
+            fanny_companion.draw_ending(ecran, int(LARGEUR_ECRAN * 0.16), int(HAUTEUR_ECRAN * 0.03))
+
         if debug_line == True:
             debug_lines()
 
         draw_fps()
+        draw_crt()
 
         pygame.display.flip()
 
